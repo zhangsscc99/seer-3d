@@ -1177,9 +1177,25 @@ export function createWorld() {
   for (const [x, z, size] of [[8, -11, 1], [15, -6.2, 1.25], [16, -7.6, .85], [7, -7.2, .7]]) mushroom(scenery, x, meadowHeight(x, z), z, size);
   mushroom(scenery, -9, 0, 1, .72);
   for (const p of [[-21, 2.7, -32, 1.2], [-4, 2.7, -36, 1], [17, 3.4, -36, 1.3]]) fiddleFern(scenery, ...p);
-  for (let row = 0; row < 2; row++) for (let i = 0; i < 17; i++) {
-    const x = -24 + i * 3 + (row % 2) * 1.2, z = 16.8 + row * 2.3 + Math.sin(i) * .4;
-    bluePlant(scenery, x, -.08, z, 1.15, Math.PI + .15 * Math.sin(i));
+  // The near bank mirrors the far one: a raised painted carpet whose edge lobes
+  // droop over the lip onto the clearing, receding on the right where stone takes over.
+  const nearWall = [];
+  for (let i = 0; i <= 30; i++) {
+    const x = -30 + i * 2;
+    nearWall.push([x, 12.6 + Math.max(0, x - 2) ** 2 * .08 + Math.sin(i * .9 + 1.3) * .6]);
+  }
+  projectCover(landShape(scenery, [...nearWall.filter(([x]) => x <= 22), [40, 70], [-40, 70]], 1.1, coverMaterial('blue')), 20);
+  for (let i = 0; i < nearWall.length - 1; i++) {
+    const [x, z] = nearWall[i];
+    if (x > 12) continue;
+    bluePlant(scenery, x, 1.13, z + .35, 1.12 + random() * .14, Math.PI + (random() - .5) * .3, .17);
+    if (i % 2 === 1) bluePlant(scenery, x + .6, 1.15, z + 1.8, 1.2, Math.PI + (random() - .5) * .2, .05);
+  }
+  for (let row = 0; row < 3; row++) for (let col = 0; col < 9; col++) {
+    const x = -29 + col * 5.2 + (row % 2) * 2.4, z = 16.5 + row * 4.6 + Math.sin(col * 2.1) * .9;
+    if (x > 8 + row * 6) continue;
+    const fold = bluePlant(scenery, x, 1.15, z, 1.25 + random() * .2, Math.PI + (random() - .5) * .5);
+    fold.scale.y *= .42;
   }
   for (const [x, z, s] of [[-13, 4, .45], [-10, 1.7, .36], [11.1, 3.5, .35], [14.4, 4.5, .48], [-17, -1, .7]]) mushroom(scenery, x, 0, z, s);
   for (let i = 0; i < 24; i++) {
