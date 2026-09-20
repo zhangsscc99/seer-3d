@@ -256,7 +256,7 @@ function landShape(parent, points, height, color) {
 }
 
 const breeze = { value: 0 };
-const leafMaterial = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .76, side: THREE.DoubleSide });
+const leafMaterial = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1 });
 leafMaterial.onBeforeCompile = shader => {
   shader.uniforms.breezeTime = breeze;
   shader.vertexShader = `uniform float breezeTime;\n${shader.vertexShader}`.replace('#include <begin_vertex>', `
@@ -270,37 +270,40 @@ function prepareLeaves() {
   if (leafMaterial.map) return;
   const canvas = document.createElement('canvas'); canvas.width = 256; canvas.height = 512;
   const ctx = canvas.getContext('2d');
-  ctx.fillStyle = '#e5f2ef'; ctx.fillRect(0, 0, 256, 512);
-  for (let i = 0; i < 13; i++) for (const side of [-1, 1]) {
-    const y = 15 + i * 39;
-    ctx.beginPath(); ctx.moveTo(128, y); ctx.bezierCurveTo(128 + side * 36, y + 12, 128 + side * 72, y + 65, 128 + side * 140, y + 85);
-    ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(38,101,117,.3)'; ctx.stroke();
-    ctx.translate(0, 3); ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(255,255,244,.65)'; ctx.stroke(); ctx.translate(0, -3);
-  }
-  ctx.fillStyle = '#b9d9d1'; ctx.fillRect(125, 0, 6, 512);
-  ctx.fillStyle = '#f5ffea'; ctx.fillRect(129, 0, 2, 512);
+  ctx.fillStyle = '#d6edf8'; ctx.fillRect(0, 0, 256, 512);
+  ctx.fillStyle = '#f3fcff'; ctx.beginPath(); ctx.moveTo(57, 482);
+  ctx.bezierCurveTo(27, 380, 26, 275, 52, 176);
+  ctx.bezierCurveTo(60, 137, 80, 78, 103, 49);
+  ctx.bezierCurveTo(92, 155, 137, 193, 111, 282);
+  ctx.bezierCurveTo(98, 320, 97, 367, 116, 385);
+  ctx.quadraticCurveTo(84, 412, 57, 482); ctx.fill();
+  ctx.strokeStyle = '#8ebacf'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(142, 511);
+  ctx.bezierCurveTo(137, 402, 151, 308, 137, 237);
+  ctx.bezierCurveTo(133, 217, 134, 184, 144, 160); ctx.stroke();
+  ctx.fillStyle = '#9ec7dc'; ctx.fillRect(0, 0, 3, 512); ctx.fillRect(253, 0, 3, 512);
   const texture = new THREE.CanvasTexture(canvas); texture.colorSpace = THREE.SRGBColorSpace; texture.anisotropy = 8;
-  leafMaterial.map = texture; leafMaterial.bumpMap = texture; leafMaterial.bumpScale = .025; leafMaterial.needsUpdate = true;
+  leafMaterial.map = texture; leafMaterial.needsUpdate = true;
 }
 const leafGeometries = [];
 function leafGeometry(variant) {
   if (leafGeometries[variant]) return leafGeometries[variant];
-  const positions = [], colors = [], uv = [], indices = [], rows = 24, columns = 6;
-  const base = new THREE.Color([0x329cba, 0x2686a8, 0x57b8ca][variant]);
+  const positions = [], colors = [], uv = [], indices = [], rows = 24, columns = 12;
+  const base = new THREE.Color([0x42a8d2, 0x369bca, 0x50b3d9][variant]);
   for (let i = 0; i <= rows; i++) for (let j = 0; j <= columns; j++) {
-    const t = i / rows, u = j / columns * 2 - 1;
-    const wave = Math.sin(t * Math.PI * 12 + variant);
-    const width = Math.pow(Math.sin(Math.PI * t), .8) * (.53 + .028 * wave);
-    const x = u * width + Math.sin(t * Math.PI) * .15 * (variant - 1);
-    const y = .07 + .64 * Math.sin(t * Math.PI * .95) - .28 * Math.abs(u) * Math.sin(t * Math.PI) + Math.pow(Math.abs(u), 3) * wave * .055 + t ** 8 * .18;
-    positions.push(x, y, t * 2.55);
-    const ridge = Math.exp(-u * u * 65) * .20;
-    const shade = .83 + ridge + t * .17 - Math.pow(Math.abs(u), 6) * .15 + wave * .025;
+    const t = i / rows, angle = j / columns * Math.PI * 2, u = Math.cos(angle);
+    const taper = Math.pow(Math.sin(Math.PI * t), .43);
+    const width = taper * (.75 - t * .12) * (1 + Math.sin(t * Math.PI * 3 + variant) * .045);
+    const x = u * width + Math.sin(t * Math.PI) * .18 * (variant - 1);
+    const thickness = .095 * taper * Math.sin(angle);
+    const y = .14 + .24 * Math.sin(t * Math.PI) - t * .04 + thickness;
+    positions.push(x, y, t * 2.45);
+    const shade = .88 + Math.max(0, Math.sin(angle)) * .10 - Math.max(0, -Math.sin(angle)) * .14;
     const color = base.clone().multiplyScalar(shade);
-    colors.push(color.r, color.g, color.b); uv.push(j / columns, t);
+    colors.push(color.r, color.g, color.b); uv.push((u + 1) / 2, t);
     if (i < rows && j < columns) {
-      const a = i * (columns + 1) + j;
-      indices.push(a, a + columns + 1, a + 1, a + 1, a + columns + 1, a + columns + 2);
+      const a = i * (columns + 1) + j, b = a + columns + 1;
+      indices.push(a, a + 1, b, a + 1, b + 1, b);
     }
   }
   const geometry = new THREE.BufferGeometry();
@@ -312,16 +315,134 @@ function leafGeometry(variant) {
   return geometry;
 }
 
-function bluePlant(parent, x, y, z, size = 1, yaw = null) {
+function bluePlant(parent, x, y, z, size = 1, yaw = null, drape = 0) {
   const plant = group(parent, x, y, z);
   plant.scale.setScalar(size);
   plant.rotation.y = yaw ?? random() * Math.PI * 2;
-  for (let j = 0; j < 5; j++) {
-    const leaf = mesh(plant, leafGeometry(j % 3), leafMaterial, (j - 2) * .14, (2 - Math.abs(j - 2)) * .055, 0);
-    leaf.rotation.set((random() - .5) * .08, (j - 2) * .5, 0);
-    leaf.scale.set(.75 + random() * .3, .8 + random() * .5, .68 + random() * .27);
+  for (let j = 0; j < 4; j++) {
+    const spread = j - 1.5;
+    const leaf = mesh(plant, leafGeometry(j % 3), leafMaterial, spread * .22, (1.5 - Math.abs(spread)) * .035, 0);
+    leaf.rotation.set(drape, spread * .38 + (random() - .5) * .08, 0);
+    leaf.scale.set(.85 + random() * .18, .85 + random() * .20, .77 + random() * .18);
   }
   return plant;
+}
+
+const meadowCurve = new THREE.CatmullRomCurve3([
+  [4, -9], [6, -6.7], [9, -5.3], [13, -4.4], [17, -3], [19, -.5], [20, 2.5], [24, 7],
+  [34, 8], [85, -8], [95, -100], [22, -110], [8, -67], [5.5, -23],
+].map(([x, z]) => new THREE.Vector3(x, 0, z)), true);
+const meadowBorder = meadowCurve.getSpacedPoints(72).slice(0, -1).map(p => [p.x, p.z]);
+
+function meadowContains(x, z) {
+  let inside = false;
+  for (let i = 0, j = meadowBorder.length - 1; i < meadowBorder.length; j = i++) {
+    const a = meadowBorder[i], b = meadowBorder[j];
+    if ((a[1] > z) !== (b[1] > z) && x < (b[0] - a[0]) * (z - a[1]) / (b[1] - a[1]) + a[0]) inside = !inside;
+  }
+  return inside;
+}
+
+function meadowDistance(x, z) {
+  let distance = Infinity;
+  for (let i = 0; i < meadowBorder.length; i++) {
+    const a = meadowBorder[i], b = meadowBorder[(i + 1) % meadowBorder.length];
+    const dx = b[0] - a[0], dz = b[1] - a[1];
+    const t = THREE.MathUtils.clamp(((x - a[0]) * dx + (z - a[1]) * dz) / (dx * dx + dz * dz), 0, 1);
+    distance = Math.min(distance, (x - a[0] - dx * t) ** 2 + (z - a[1] - dz * t) ** 2);
+  }
+  return Math.sqrt(distance);
+}
+
+const meadowHeight = (x, z) => 2.70 + .38 * THREE.MathUtils.smoothstep(meadowDistance(x, z), 0, 1.8);
+const nearMeadow = (x, z, margin = 1.7) => meadowContains(x, z) || meadowDistance(x, z) < margin;
+
+function coverMaterial(kind) {
+  const key = `painted-groundcover-${kind}`;
+  if (materials.has(key)) return materials.get(key);
+  const canvas = document.createElement('canvas'); canvas.width = canvas.height = 1024;
+  const ctx = canvas.getContext('2d'), green = kind === 'green';
+  const palette = green ? ['#99b632', '#819b2d', '#71892c', '#abc438'] : ['#46a6ce', '#3494c1', '#2988b9', '#56b0d1'];
+  ctx.fillStyle = green ? '#839c2e' : '#3197c4'; ctx.fillRect(0, 0, 1024, 1024);
+  let n = green ? 713 : 197;
+  const rand = () => ((n = Math.imul(n, 1664525) + 1013904223 >>> 0) / 4294967296);
+  for (let i = 0; i < (green ? 38 : 23); i++) {
+    const x = rand() * 1024, y = rand() * 1024, rx = 45 + rand() * 95, ry = 24 + rand() * 66;
+    const points = Array.from({ length: green ? 22 : 12 }, (_, j) => {
+      const a = j / (green ? 22 : 12) * Math.PI * 2;
+      const r = .85 + rand() * .25;
+      return [x + Math.cos(a) * rx * r, y + Math.sin(a) * ry * r];
+    });
+    for (let ty = -1; ty <= 1; ty++) for (let tx = -1; tx <= 1; tx++) {
+      ctx.save(); ctx.translate(tx * 1024, ty * 1024); ctx.beginPath();
+      points.forEach((p, j) => {
+        const next = points[(j + 1) % points.length];
+        if (!j) ctx.moveTo(p[0], p[1]);
+        if (green) {
+          ctx.lineTo(p[0], p[1]);
+          ctx.lineTo((p[0] + next[0]) / 2 + (next[1] - p[1]) * .22, (p[1] + next[1]) / 2 - (next[0] - p[0]) * .22);
+        } else ctx.lineTo(p[0], p[1]);
+      });
+      ctx.closePath(); ctx.fillStyle = palette[i % palette.length]; ctx.fill(); ctx.restore();
+    }
+  }
+  if (green) for (let i = 0; i < 180; i++) {
+    const x = rand() * 1024, y = rand() * 1024;
+    ctx.fillStyle = i % 3 ? '#a3bd36' : '#758d28'; ctx.beginPath(); ctx.moveTo(x, y);
+    ctx.lineTo(x + 6, y - 9); ctx.lineTo(x + 7, y - 3); ctx.lineTo(x + 14, y - 11);
+    ctx.lineTo(x + 13, y - 2); ctx.lineTo(x + 23, y - 5); ctx.quadraticCurveTo(x + 12, y + 5, x, y); ctx.fill();
+  }
+  const map = new THREE.CanvasTexture(canvas); map.colorSpace = THREE.SRGBColorSpace;
+  map.wrapS = map.wrapT = THREE.RepeatWrapping; map.anisotropy = 8;
+  const mat = new THREE.MeshStandardMaterial({ map, roughness: 1 }); mat.name = key;
+  materials.set(key, mat); return mat;
+}
+
+function projectCover(object, scale) {
+  const positions = object.geometry.attributes.position, uv = [];
+  for (let i = 0; i < positions.count; i++) uv.push(positions.getX(i) / scale, positions.getZ(i) / scale);
+  object.geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  return object;
+}
+
+function greenMeadow(parent) {
+  const positions = [], uv = [], indices = [], vertices = new Map(), divisions = 16;
+  const facets = THREE.ShapeUtils.triangulateShape(meadowBorder.map(([x, z]) => new THREE.Vector2(x, -z)), []);
+  const vertex = (x, z) => {
+    const key = `${Math.round(x * 1e5)},${Math.round(z * 1e5)}`;
+    if (!vertices.has(key)) {
+      vertices.set(key, positions.length / 3); positions.push(x, meadowHeight(x, z), z); uv.push(x / 18, z / 18);
+    }
+    return vertices.get(key);
+  };
+  for (const facet of facets) {
+    const [a, b, c] = facet.map(i => meadowBorder[i]), grid = [];
+    for (let i = 0; i <= divisions; i++) {
+      grid[i] = [];
+      for (let j = 0; j <= divisions - i; j++) grid[i][j] = vertex(a[0] + (b[0] - a[0]) * i / divisions + (c[0] - a[0]) * j / divisions, a[1] + (b[1] - a[1]) * i / divisions + (c[1] - a[1]) * j / divisions);
+    }
+    for (let i = 0; i < divisions; i++) for (let j = 0; j < divisions - i; j++) {
+      indices.push(grid[i][j], grid[i + 1][j], grid[i][j + 1]);
+      if (i + j < divisions - 1) indices.push(grid[i + 1][j], grid[i + 1][j + 1], grid[i][j + 1]);
+    }
+  }
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  geometry.setIndex(indices); geometry.computeVertexNormals();
+  mesh(parent, geometry, coverMaterial('green')).name = 'rolling-green-meadow';
+  for (let i = 0; i < meadowBorder.length; i++) {
+    const a = meadowBorder[i], b = meadowBorder[(i + 1) % meadowBorder.length];
+    const length = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    let nx = (b[1] - a[1]) / length, nz = (a[0] - b[0]) / length;
+    if (meadowContains((a[0] + b[0]) / 2 + nx * .1, (a[1] + b[1]) / 2 + nz * .1)) { nx = -nx; nz = -nz; }
+    const count = Math.ceil(length / .48);
+    for (let j = 0; j < count; j++) {
+      const t = (j + .2 + random() * .6) / count, x = THREE.MathUtils.lerp(a[0], b[0], t), z = THREE.MathUtils.lerp(a[1], b[1], t);
+      const tuft = grass(parent, x - nx * .08, 2.71, z - nz * .08, .45 + random() * .65, true, Math.atan2(nx, nz));
+      tuft.rotation.x = .20 + random() * .08;
+    }
+  }
 }
 
 function coral(parent, x, z, scale = 1, yaw = 0) {
@@ -446,20 +567,21 @@ function fossil(parent) {
 }
 
 let grassGeometry;
-const grassMaterial = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .88, side: THREE.DoubleSide });
-function grass(parent, x, y, z, size = 1) {
+const grassMaterial = new THREE.MeshStandardMaterial({ color: 0x439fc7, vertexColors: true, roughness: 1, side: THREE.DoubleSide });
+const greenGrassMaterial = new THREE.MeshStandardMaterial({ color: 0xa5c342, vertexColors: true, roughness: 1, side: THREE.DoubleSide });
+function grass(parent, x, y, z, size = 1, green = false, yaw = null) {
   if (!grassGeometry) {
     const positions = [], colors = [], uv = [], indices = [];
-    for (let blade = 0; blade < 7; blade++) {
-      const angle = blade * 2.399, length = .38 + (blade % 3) * .13, start = positions.length / 3;
-      const color = new THREE.Color([0x4c9296, 0x6bb1ac, 0x91c3af][blade % 3]);
-      for (let row = 0; row <= 5; row++) for (const side of [-1, 0, 1]) {
-        const t = row / 5, r = .07 + t * t * .42;
-        const w = Math.sin(Math.PI * (t * .85 + .15)) * .07 * side;
-        positions.push(Math.sin(angle) * r + Math.cos(angle) * w, length * t - Math.abs(side) * .035, Math.cos(angle) * r - Math.sin(angle) * w);
-        const c = color.clone().multiplyScalar(.68 + .40 * t + (side === 0 ? .12 : 0));
-        colors.push(c.r, c.g, c.b); uv.push((side + 1) / 2, t);
-        if (row < 5 && side < 1) {
+    for (let blade = 0; blade < 5; blade++) {
+      const angle = (blade - 2) * .37, length = .40 + (blade % 3) * .09, start = positions.length / 3;
+      for (let row = 0; row <= 6; row++) for (const side of [-1, 0, 1]) {
+        const t = row / 6, r = .035 + t * length;
+        const w = Math.pow(Math.sin(Math.PI * t), .55) * .075 * side;
+        const y = .025 + Math.sin(Math.PI * t) * .115 + t * .055 - Math.abs(side) * .022 * Math.sin(Math.PI * t);
+        positions.push(Math.sin(angle) * r + Math.cos(angle) * w, y, Math.cos(angle) * r - Math.sin(angle) * w);
+        const shade = .76 + t * .19 + (side === 0 ? .07 : 0);
+        colors.push(shade, shade, shade); uv.push((side + 1) / 2, t);
+        if (row < 6 && side < 1) {
           const a = start + row * 3 + side + 1;
           indices.push(a, a + 3, a + 1, a + 1, a + 3, a + 4);
         }
@@ -471,8 +593,9 @@ function grass(parent, x, y, z, size = 1) {
     grassGeometry.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
     grassGeometry.setIndex(indices); grassGeometry.computeVertexNormals();
   }
-  const tuft = mesh(parent, grassGeometry, grassMaterial, x, y, z);
-  tuft.rotation.y = random() * Math.PI * 2; tuft.scale.setScalar(size);
+  const tuft = mesh(parent, grassGeometry, green ? greenGrassMaterial : grassMaterial, x, y, z);
+  tuft.rotation.y = yaw ?? random() * Math.PI * 2; tuft.scale.setScalar(size);
+  return tuft;
 }
 
 function flowerCluster(parent, x, y, z, size = 1) {
@@ -1010,12 +1133,13 @@ export function createWorld() {
     const x = -24 + i * 2;
     wall.push([x, -7.5 + Math.max(0, x - 3) ** 2 * .038 + Math.sin(i * .85) * .7]);
   }
-  landShape(scenery, [...wall, [40, -35], [20, -43], [0, -40], [-25, -43], [-43, -34]], 2.5, 0x38879a);
+  projectCover(landShape(scenery, [...wall, [80, -30], [100, -120], [0, -125], [-100, -120], [-80, -30]], 2.5, coverMaterial('blue')), 20);
   const ridgePositions = [], ridgeColors = [], ridgeIndices = [];
   for (let row = 0; row < 4; row++) for (let i = 0; i <= 48; i++) {
     const x = -72 + i * 3, crest = 3.5 + Math.sin(x * .13) * 1.8 + Math.cos(x * .29) * .65;
-    ridgePositions.push(x, row === 0 ? 2.52 : row === 3 ? .1 : crest * (row === 1 ? 1 : 1.3), [-29, -36, -43, -56][row] + Math.sin(x * .1) * 2);
-    const color = new THREE.Color([0x38879a, 0x6499aa, 0x8fb0b8, 0xb9c5bc][row]); ridgeColors.push(color.r, color.g, color.b);
+    ridgePositions.push(x, row === 0 ? 2.52 : row === 3 ? .1 : crest * (row === 1 ? 1 : 1.3), [-65, -72, -79, -92][row] + Math.sin(x * .1) * 2);
+    const palette = meadowContains(x, [-65, -72, -79, -92][row]) ? [0x91ad3d, 0x8fa740, 0x7f9647, 0xb6c58d] : [0x42a4cb, 0x63b0cf, 0x8fbed0, 0xb9cbd0];
+    const color = new THREE.Color(palette[row]); ridgeColors.push(color.r, color.g, color.b);
     if (row && i) {
       const a = (row - 1) * 49 + i - 1, b = row * 49 + i - 1;
       ridgeIndices.push(a, a + 1, b, a + 1, b + 1, b);
@@ -1033,58 +1157,32 @@ export function createWorld() {
       const height = .60 + random() * .19, rockX = x + (row % 2) * .9, rockY = .03 + row * .76;
       rockSlab(scenery, rockX, rockY, z + .45 + (2 - row) * .36, width, height, depth, [0xc5a074, 0xe2b88a, 0xd6aa7d, 0xb89b77][(i + row) % 4]);
     }
-    const nearTerrace = x > 2.5 && x < 24 && z > -14;
-    if (!nearTerrace) {
-      bluePlant(scenery, x, 2.62, z - 1.3, .78 + random() * .32, -.3 + random() * .6);
-      bluePlant(scenery, x - .7, 2.64, z - 3.0, .9 + random() * .3, random() * .8 - .4);
-      for (let j = 0; j < 3; j++) grass(scenery, x + j * .42, 2.62, z - .55, .55 + random() * .45);
-    }
-    if (i % 3 === 0 && !nearTerrace) {
-      const vine = [[x + .3, 2.6, z - .2], [x + .5, 2.35, z + .5], [x + .35, 1.9, z + .85], [x + .6, 1.3, z + 1.0]];
-      tube(scenery, vine, .025, 0x557e69, 16);
-      for (let j = 0; j < 5; j++) ball(scenery, x + .38 + Math.sin(j * 2) * .14, 2.4 - j * .21, z + .58 + j * .09, .13, .055, .09, j % 2 ? 0x80a67e : 0x5d9290);
-      flowerCluster(scenery, x + .6, 2.7, z - .6, .8);
+    if (!nearMeadow(x, z, .8)) {
+      // Overlapping lobes hang from the bank; the interior stays a broad blue carpet.
+      bluePlant(scenery, x, 2.53, z - 1.45, 1.12 + random() * .14, -.12 + random() * .24, .17);
+      if (i % 2 === 0) bluePlant(scenery, x - .55, 2.55, z - 2.85, 1.20, .08, .04);
     }
   }
-  for (let row = 0; row < 8; row++) for (let col = 0; col < 21; col++) {
-    const x = -28 + col * 2.85 + (row % 2) * 1.4 + (random() - .5) * 1.2;
-    const z = -10.2 - row * 2.65 + (random() - .5) * 1.1;
-    if (x > 3 && x < 23 && z > -16) continue;
-    bluePlant(scenery, x, 2.58, z, .72 + random() * .65, -.95 + random() * 1.9);
-    grass(scenery, x + 1, 2.6, z + .4, .8 + random());
-    if ((row * 21 + col) % 13 === 0) flowerCluster(scenery, x - 1, 2.6, z, 1.1);
+  for (let row = 0; row < 4; row++) for (let col = 0; col < 12; col++) {
+    const x = -31 + col * 5.4 + (row % 2) * 2.1;
+    const z = -14.5 - row * 5.4 + Math.sin(col * 2.4) * 1.1;
+    if (nearMeadow(x, z, 2.4)) continue;
+    // Sparse low folds avoid the former wall-to-wall rows of individual shrubs.
+    const cover = bluePlant(scenery, x, 2.55, z, 1.25 + random() * .22, -.18 + random() * .36);
+    cover.scale.y *= .42;
   }
-  // The green terrace occupies the upper right of the reference scene.
-  landShape(scenery, [[4, -9], [5.5, -11.8], [8, -13], [14, -14], [20, -12], [21, -8], [18, -5], [13, -4], [9, -5], [7, -6]], 3.15, 0x95b94f);
-  landShape(scenery, [[7.1, -7.2], [9.2, -10.9], [13.4, -12.2], [17.9, -10.7], [18.2, -7.5], [15.5, -5.9], [11.3, -6.1]], .035, 0xa8ca5a).position.y = 3.14;
-  for (let i = 0; i < 90; i++) {
-    const x = 8 + random() * 10, z = -7 - random() * 4.5;
-    if (Math.hypot(x - 11.5, z + 9) < 2.65) continue;
-    grass(scenery, x, 3.37, z, .45 + random() * .65);
-    if (i % 7 === 0) flowerCluster(scenery, x, 3.38, z, .75);
-  }
-  for (let i = 0; i < 5; i++) rockSlab(scenery, 9.8 - i * .8, 3.28, -6.8 + i * .32, .46, .09, .34, 0xd3c3a0);
-  surveyBeacon(scenery, 8.3, 3.38, -6.1, -.25);
-  surveyBeacon(scenery, -9.4, .02, -3.6, .3);
-  tube(scenery, [[8.3, 3.44, -6.1], [8.8, 3.43, -6.8], [9.6, 3.44, -7.1], [10.2, 3.45, -7.8]], .026, 0x496561, 24);
+  // A single continuous green bank extends behind the portal to the horizon.
+  greenMeadow(scenery);
   coral(scenery, -11, -.8, 1.18, .2);
   coral(scenery, -17, -9, .85, -.35);
   coral(scenery, -20, 6, .68, 1);
   fossil(scenery);
-  for (const p of [[8, 3.4, -11, 1], [15, 3.4, -6.2, 1.25], [16, 3.4, -7.6, .85], [7, 3.4, -7.2, .7], [-9, 0, 1, .72]]) mushroom(scenery, ...p);
-  for (const p of [[-20, 2.7, -15, 1.6], [-4, 2.7, -19, 1.2], [4, 3, -19, 1.5], [20, 3, -14, 1.9], [-13, 2.7, -12, .9]]) fiddleFern(scenery, ...p);
-  for (let row = 0; row < 3; row++) for (let i = 0; i < 17; i++) {
-    const x = -24 + i * 3 + (row % 2) * 1.2, z = 13 + row * 2.3 + (random() - .5) * .8;
-    bluePlant(scenery, x, -.01, z, .8 + random() * .55, Math.PI + random() - .5);
-    grass(scenery, x + 1.1, 0, z - .2, 1.1);
-    if (i % 4 === 0 && row === 0) flowerCluster(scenery, x + .7, 0, z - .6, 1.1);
-  }
-  for (let i = 0; i < 100; i++) {
-    const a = random() * Math.PI * 2, r = 9 + random() * 4;
-    const x = Math.sin(a) * r, z = Math.cos(a) * r * .52 + 3.4;
-    if (z < -3.2 || (x > 9 && z < 3)) continue;
-    grass(scenery, x, 0, z, .5 + random() * .8);
-    if (i % 12 === 0) flowerCluster(scenery, x + .15, 0, z, .7);
+  for (const [x, z, size] of [[8, -11, 1], [15, -6.2, 1.25], [16, -7.6, .85], [7, -7.2, .7]]) mushroom(scenery, x, meadowHeight(x, z), z, size);
+  mushroom(scenery, -9, 0, 1, .72);
+  for (const p of [[-21, 2.7, -32, 1.2], [-4, 2.7, -36, 1], [17, 3.4, -36, 1.3]]) fiddleFern(scenery, ...p);
+  for (let row = 0; row < 2; row++) for (let i = 0; i < 17; i++) {
+    const x = -24 + i * 3 + (row % 2) * 1.2, z = 16.8 + row * 2.3 + Math.sin(i) * .4;
+    bluePlant(scenery, x, -.08, z, 1.15, Math.PI + .15 * Math.sin(i));
   }
   for (const [x, z, s] of [[-13, 4, .45], [-10, 1.7, .36], [11.1, 3.5, .35], [14.4, 4.5, .48], [-17, -1, .7]]) mushroom(scenery, x, 0, z, s);
   for (let i = 0; i < 24; i++) {
@@ -1100,7 +1198,7 @@ export function createWorld() {
   }
   batch(scenery);
 
-  const portal = group(root, 11.5, 3.4, -9);
+  const portal = group(root, 11.5, meadowHeight(11.5, -9) + .025, -9);
   portal.name = 'interstellar-teleporter';
   const alloy = surfaceMaterial(0xd7dfd2, 'metal'), darkAlloy = surfaceMaterial(0x52777a, 'metal');
   cylinder(portal, 0, .10, 0, 2.15, 2.35, .22, darkAlloy, 48);

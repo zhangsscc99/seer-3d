@@ -139,7 +139,7 @@ function init() {
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0xefc4a7);
-  scene.fog = new THREE.Fog(0xefc4a7, 48, 105);
+  scene.fog = new THREE.Fog(0xefc4a7, 75, 140);
   const environment = new RoomEnvironment(), generator = new THREE.PMREMGenerator(renderer);
   scene.environment = generator.fromScene(environment, .04).texture;
   scene.environmentIntensity = .24;
@@ -275,7 +275,7 @@ function travel(area) {
   const places = {
     grass: { player: [3, 0, 5.6], target: [0, 1.2, -.4], camera: [2.8, 25, 37], title: '草原' },
     mine: { player: [-5.7, 0, -1.9], target: [-5, 1, -3], camera: [-4, 19, 23], title: '黄晶矿区' },
-    portal: { player: [11.5, 4.02, -9], target: [9, 2.8, -7], camera: [10, 20, 19], title: '传送台' },
+    portal: { player: [11.5, world.portal.position.y + .62, -9], target: [9, 2.8, -7], camera: [10, 20, 19], title: '传送台' },
   };
   const place = places[area];
   player.position.fromArray(place.player);
