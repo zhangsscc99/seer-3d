@@ -1,0 +1,19 @@
+{
+  "name": "mole-manor-3d",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A reference-inspired Three.js Mole Manor world with a standalone web app and offline Xiaohongshu mini-tool.",
+  "scripts": {
+    "install:apps": "npm ci --prefix web && npm ci --prefix xhs",
+    "dev": "npm run dev --prefix web",
+    "dev:seer": "npm run dev --prefix seer-3d",
+    "build:seer": "npm run build --prefix seer-3d",
+    "test:seer": "npm test --prefix seer-3d",
+    "build": "npm run build --prefix web && npm run build --prefix xhs",
+    "package:xhs": "npm run package --prefix xhs",
+    "test:web": "npm run test:smoke --prefix web",
+    "test:xhs": "npm run test:runtime --prefix xhs",
+    "test:mobile": "npm run test:mobile --prefix xhs"
+  },
+  "engines": { "node": ">=20.19.0" }
+}

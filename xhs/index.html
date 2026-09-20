@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'none'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'; worker-src 'none'" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#f4f0df" />
+  <meta name="description" content="横过手机，走进摩尔庄园的十五处风景与全岛 3D 世界。" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='18' r='12' fill='%23eab36b'/%3E%3Cpath d='M16 8Q14 1 26 3Q25 10 16 8' fill='%23598460'/%3E%3C/svg%3E" />
+  <title>摩尔庄园 · 横屏小世界</title>
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body data-page="scene" data-view="classic" data-sound="false">
+  <div id="app-shell" class="app-shell">
+    <svg class="svg-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14m-5-5 5 5-5 5"/></symbol>
+      <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+      
+      <symbol id="i-reset" viewBox="0 0 24 24"><path d="M4.5 9A8 8 0 1 1 4 15M4 4v5h5"/></symbol>
+      <symbol id="i-sound" viewBox="0 0 24 24"><path d="m12 4-6 5H3v6h3l6 5V4Z"/><path class="sound-waves" d="M16 8a6 6 0 0 1 0 8M19 5a10 10 0 0 1 0 14"/><path class="sound-slash" d="m16 9 5 6m0-6-5 6"/></symbol>
+      <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.7 8.3a2.5 2.5 0 0 1 4.8.8c0 1.9-2.5 2.2-2.5 4.4M12 17h.01"/></symbol>
+      <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+      <symbol id="i-cube" viewBox="0 0 24 24"><path d="m12 2 9 5v10l-9 5-9-5V7l9-5Z"/><path d="m3 7 9 5 9-5M12 12v10"/></symbol>
+    </svg>
+    <header class="site-header">
+      <button type="button" class="brand" id="brand-home" data-testid="brand-home" aria-label="摩尔庄园，返回庄园全岛">
+        <svg class="brand-mark" viewBox="0 0 60 60" fill="none" aria-hidden="true"><path d="M29 15C23 7 29 2 39 4c-1 8-4 12-10 11Z" fill="#7d9e61" stroke="#4d7049" stroke-width="1.5"/><path d="M29.5 18C21 10 6 17 8 32c1 12 13 21 21.5 20C38 53 50 44 51 32c2-15-13-22-21.5-14Z" fill="#fff7dc" stroke="#6c8154" stroke-width="1.7"/><ellipse cx="21" cy="29" rx="2" ry="3" fill="#48664e"/><ellipse cx="38" cy="29" rx="2" ry="3" fill="#48664e"/><ellipse cx="29.5" cy="36.5" rx="8.7" ry="7" fill="#d96b52"/></svg>
+        <span class="brand-copy"><span class="brand-name">摩尔庄园</span><span id="location-title" class="location-title">庄园全岛</span></span>
+      </button>
+      <span class="view-label" data-testid="view-classic">3D 全景</span>
+      <nav class="header-tools" aria-label="庄园工具">
+        <button type="button" class="tool-button" id="island-button" data-testid="world-overview"><svg class="icon" aria-hidden="true"><use href="#i-cube"/></svg><span>全岛</span></button>
+        <div class="scene-tools" id="scene-tools">
+          
+          <button type="button" class="tool-button" id="reset-button" data-testid="reset-view" aria-label="复位当前场景视角"><svg class="icon" aria-hidden="true"><use href="#i-reset"/></svg><span>复位</span></button>
+        </div>
+        <button type="button" class="icon-button" id="sound-button" data-testid="toggle-sound" aria-label="开启背景音乐" title="开启背景音乐" aria-pressed="false"><svg class="icon" aria-hidden="true"><use href="#i-sound"/></svg></button>
+        <button type="button" class="icon-button" id="help-button" data-testid="show-help" aria-label="打开游览指南" title="游览指南" aria-haspopup="dialog"><svg class="icon" aria-hidden="true"><use href="#i-help"/></svg></button>
+      </nav>
+    </header>
+    <main class="theatre" id="theatre">
+      <section class="stage scene-stage" id="scene-stage" aria-label="3D 庄园场景">
+        <canvas id="world" data-testid="world" aria-label="摩尔庄园 3D 全景，单指环绕、双指缩放、轻点地面行走" tabindex="0"></canvas>
+        <div class="portal-layer" id="portal-layer" aria-label="通往相邻场景的路牌"></div>
+        <div class="scene-badge"><span id="camera-mode-label">单指环绕 · 双指缩放</span></div>
+        <span class="progress-caption" id="progress-text">足迹 0 / 15</span>
+      </section>
+      <div class="stage-loading" id="stage-loading" role="status" aria-live="polite">
+        <div class="loading-mushroom" aria-hidden="true"><i></i><b></b></div>
+        <p id="loading-text">正在铺好通往庄园的小路…</p>
+        <span class="loading-track"><i></i></span>
+      </div>
+    </main>
+    <nav class="destination-nav" id="destination-nav" aria-label="全部十五个 3D 场景"></nav>
+    <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+    <div class="screen" id="help-dialog" aria-hidden="true" hidden>
+      <section class="modal-card help-card" role="dialog" aria-modal="true" aria-labelledby="help-title">
+        <header class="dialog-header"><h2 id="help-title">横过手机，逛逛庄园</h2><button type="button" class="close-button" id="help-close" data-testid="close-help" aria-label="关闭游览指南"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg><span>关闭</span></button></header>
+        <dl class="help-list">
+          <div><dt>换个角度</dt><dd>单指拖动环绕，双指捏合缩放；点「复位」回到初始视角。</dd></div>
+          <div><dt>继续逛逛</dt><dd>下方地名切换场景，点「全岛」看整个世界，轻点地面行走。</dd></div>
+        </dl>
+        <p class="help-note">首次轻触后循环播放背景音乐，点右上角喇叭可静音或开启。电脑上也可以拖动鼠标环绕、滚轮缩放。</p>
+        <button type="button" class="primary-button" id="help-start" data-testid="help-start">好，去逛逛<svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></button>
+      </section>
+    </div>
+
+    <div class="screen fatal-screen" id="fatal-error" aria-hidden="true" hidden>
+      <section class="modal-card error-card" role="alertdialog" aria-modal="true" aria-labelledby="fatal-title">
+        <h2 id="fatal-title">小路还没准备好</h2><p id="fatal-message" data-error-message>画面暂时没有加载成功，请重新进入庄园。</p>
+        <button type="button" class="primary-button" id="fatal-retry" data-testid="retry-app" data-retry="true">重新进入</button>
+      </section>
+    </div>
+  </div>
+  <script src="./boot.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>

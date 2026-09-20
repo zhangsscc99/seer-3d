@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#f4f0df" />
+  <meta name="description" content="从熟悉的摩尔庄园全岛出发，走进十五个根据原版场景重建的 3D 小世界。" />
+  <title>摩尔庄园 · 再逛一次童年</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Crect width='48' height='48' rx='14' fill='%23edf0dd'/%3E%3Cellipse cx='24' cy='27' rx='17' ry='16' fill='%23fff4dd'/%3E%3Cellipse cx='24' cy='30' rx='8' ry='7' fill='%23d96b50'/%3E%3Cpath d='M24 12Q20 0 34 5Q33 14 24 12' fill='%23698851'/%3E%3Ccircle cx='17' cy='22' r='2' fill='%233e5944'/%3E%3Ccircle cx='31' cy='22' r='2' fill='%233e5944'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body data-page="scene">
+  <svg class="svg-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14m-5-5 5 5-5 5"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+    
+    <symbol id="i-reset" viewBox="0 0 24 24"><path d="M4.5 9A8 8 0 1 1 4 15M4 4v5h5"/></symbol>
+    <symbol id="i-sound" viewBox="0 0 24 24"><path d="m12 4-6 5H3v6h3l6 5V4Z"/><path class="sound-waves" d="M16 8a6 6 0 0 1 0 8M19 5a10 10 0 0 1 0 14"/><path class="sound-slash" d="m16 9 5 6m0-6-5 6"/></symbol>
+    <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.7 8.3a2.5 2.5 0 0 1 4.8.8c0 1.9-2.5 2.2-2.5 4.4M12 17h.01"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+    <symbol id="i-compass" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m16 8-2.5 5.5L8 16l2.5-5.5L16 8Z"/></symbol>
+    <symbol id="i-fullscreen" viewBox="0 0 24 24"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/></symbol><symbol id="i-cube" viewBox="0 0 24 24"><path d="m12 2 9 5v10l-9 5-9-5V7l9-5Z"/><path d="m3 7 9 5 9-5M12 12v10"/></symbol>
+  </svg>
+  <div class="page-shell">
+    <header class="site-header">
+      <a class="brand" href="#island" id="brand-home" data-testid="brand-home" aria-label="摩尔庄园，返回庄园全岛">
+        <svg class="brand-mark" viewBox="0 0 60 60" fill="none" aria-hidden="true"><path d="M29 15C23 7 29 2 39 4c-1 8-4 12-10 11Z" fill="#7d9e61" stroke="#4d7049" stroke-width="1.5"/><path d="M29.5 18C21 10 6 17 8 32c1 12 13 21 21.5 20C38 53 50 44 51 32c2-15-13-22-21.5-14Z" fill="#fff7dc" stroke="#6c8154" stroke-width="1.7"/><ellipse cx="21" cy="29" rx="2" ry="3" fill="#48664e"/><ellipse cx="38" cy="29" rx="2" ry="3" fill="#48664e"/><ellipse cx="29.5" cy="36.5" rx="8.7" ry="7" fill="#d96b52"/><ellipse cx="27" cy="34" rx="2.5" ry="1.4" fill="#f7b8a2" transform="rotate(-25 27 34)"/></svg>
+        <span class="brand-copy"><span class="brand-name">摩尔庄园</span><span class="brand-subtitle">再逛一次童年</span></span>
+      </a>
+      <span class="header-note"><span class="tiny-sun" aria-hidden="true"></span>记忆里的风景，又见面啦</span>
+      <nav class="header-tools" aria-label="庄园工具">
+        <button class="map-return island-return" id="island-button" data-testid="world-overview"><svg class="icon" aria-hidden="true"><use href="#i-cube"/></svg><span>全岛</span></button>
+        <span class="tool-divider" aria-hidden="true"></span>
+        <button class="icon-button" id="sound-button" data-testid="toggle-sound" aria-label="开启背景音乐" title="开启背景音乐" aria-pressed="false"><svg class="icon" aria-hidden="true"><use href="#i-sound"/></svg></button>
+        <button class="icon-button" id="help-button" data-testid="show-help" aria-label="打开游览指南" title="游览指南" aria-haspopup="dialog"><svg class="icon" aria-hidden="true"><use href="#i-help"/></svg></button>
+      </nav>
+    </header>
+    <main class="manor-main">
+      <div class="theatre-heading">
+        <div class="heading-copy"><span class="heading-mark" aria-hidden="true"><svg class="icon"><use href="#i-cube"/></svg></span><h1 id="location-title">摩尔庄园 · 全岛</h1><span class="heading-divider" aria-hidden="true"></span><p id="location-subtitle">选个熟悉的地方，进去走走</p></div>
+        <div class="scene-tools" id="scene-tools">
+          <span class="view-label" data-testid="view-classic">3D 全景</span>
+          <button class="icon-button" id="fullscreen-button" data-testid="toggle-fullscreen" aria-label="全屏游览" title="全屏游览"><svg class="icon" aria-hidden="true"><use href="#i-fullscreen"/></svg></button>
+          <button class="icon-button" id="reset-button" data-testid="reset-view" aria-label="复位当前场景视角" title="视角复位"><svg class="icon" aria-hidden="true"><use href="#i-reset"/></svg></button>
+        </div>
+      </div>
+      <div class="theatre" id="theatre">
+        <section class="stage scene-stage" id="scene-stage" aria-label="3D 庄园场景"><canvas id="world" aria-label="摩尔庄园 3D 场景，可以拖动环绕、滚轮缩放、点地面行走与点击路牌" tabindex="0"></canvas><div class="portal-layer" id="portal-layer" aria-label="通往相邻场景的路牌"></div><div class="scene-badge"><svg class="icon" aria-hidden="true"><use href="#i-cube"/></svg><span id="camera-mode-label">拖动环绕 · 滚轮缩放</span></div>
+        </section>
+        <div class="stage-loading" id="stage-loading" role="status" aria-live="polite"><div class="loading-mushroom" aria-hidden="true"><i></i><b></b></div><p id="loading-text">正在铺好通往庄园的小路…</p><span class="loading-track"><i></i></span></div>
+        <div class="theatre-corner corner-tl" aria-hidden="true"></div><div class="theatre-corner corner-tr" aria-hidden="true"></div><div class="theatre-corner corner-bl" aria-hidden="true"></div><div class="theatre-corner corner-br" aria-hidden="true"></div>
+      </div>
+      <div class="stage-caption"><p class="stage-hint" id="stage-hint"><svg class="icon" aria-hidden="true"><use href="#i-compass"/></svg><span id="stage-hint-text">转动整座岛，点击地标走进 3D 风景</span></p><div class="neighbor-links" id="neighbor-links" aria-label="从路牌前往相邻场景" hidden></div><span class="progress-caption" id="progress-caption"><span class="progress-dots" id="progress-dots" aria-hidden="true"></span><span id="progress-text">足迹 0 / 15</span></span></div>
+      <nav class="destination-nav" id="destination-nav" aria-label="全部十五个 3D 场景"></nav>
+    </main>
+    <footer class="site-footer"><p>童年的门，一直为你留着。</p><span>根据原版场景重建 · 非官方 3D 习作</span></footer>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+  <dialog class="help-dialog" id="help-dialog" aria-labelledby="help-title"><button class="icon-button help-close" id="help-close" aria-label="关闭游览指南"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button><span class="dialog-eyebrow">A LITTLE GUIDE</span><h2 id="help-title">出发吧，小摩尔</h2><p class="help-intro">转动熟悉的庄园全岛，走回那些好日子。</p><dl class="help-list"><div><dt>找个地方</dt><dd>点击全岛上的地标或下方地名，进入对应场景。</dd></div><div><dt>换个角度</dt><dd>拖动画面环绕 360°，滚轮放大或缩小；点复位按钮回到初始视角。</dd></div><div><dt>继续逛逛</dt><dd>点地面让小摩尔走过去，点路牌穿梭场景，点「全岛」返回整个世界。触屏可以拖动环绕、双指缩放。</dd></div><div><dt>听听音乐</dt><dd>首次点击或触摸后，背景音乐循环播放；点顶部音乐按钮可关闭或继续播放。</dd></div></dl><button class="primary-button" id="help-start">好，去逛逛<svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></button></dialog>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

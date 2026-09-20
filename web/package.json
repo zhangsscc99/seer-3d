@@ -1,0 +1,19 @@
+{
+  "name": "mole-manor-reference-world",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1 --port 4174 --strictPort",
+    "build": "vite build && node scripts/standalone.mjs",
+    "preview": "vite preview --host 127.0.0.1 --port 4174 --strictPort",
+    "test:smoke": "node scripts/smoke.mjs"
+  },
+  "dependencies": {
+    "three": "0.169.0"
+  },
+  "devDependencies": {
+    "playwright-core": "^1.56.1",
+    "vite": "6.1.0"
+  }
+}
