@@ -911,7 +911,25 @@ export function createBibo() {
     tube(foot, [[0, .10, .01], [.022, .23, -.035], [.023, .45, -.055]], .053, 0x388db9, 14);
     tube(foot, [[-.02, .117, .02], [.003, .117, .16], [.009, .11, .265]], .010, 0x66b2d8, 8);
   }
-  const belly = smoothBall(body, 0, .88, -.13, .48, .54, .61, pink);
+  // Plumage is shaded per vertex: pink along the back, white towards the breast and face.
+  if (!materials.has('bibo-plumage')) materials.set('bibo-plumage', new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .8 }));
+  const plumageMaterial = materials.get('bibo-plumage');
+  const shade = (geometry, back, front, direction, from, to) => {
+    const positions = geometry.attributes.position, colors = [];
+    const a = new THREE.Color(back), b = new THREE.Color(front), toward = new THREE.Vector3(...direction).normalize(), normal = new THREE.Vector3();
+    for (let i = 0; i < positions.count; i++) {
+      const c = a.clone().lerp(b, THREE.MathUtils.smoothstep(normal.fromBufferAttribute(positions, i).normalize().dot(toward), from, to));
+      colors.push(c.r, c.g, c.b);
+    }
+    geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+    return geometry;
+  };
+  const plumage = (x, y, z, sx, sy, sz, back, front, direction, from = -.1, to = .6) => {
+    const object = mesh(body, shade(new THREE.SphereGeometry(1, 40, 28), back, front, direction, from, to), plumageMaterial, x, y, z);
+    object.scale.set(sx, sy, sz);
+    return object;
+  };
+  const belly = plumage(0, .88, -.13, .48, .54, .61, pink, white, [0, -.35, 1], .05, .7);
   belly.rotation.x = -.23;
   smoothBall(body, 0, .72, -.35, .405, .32, .48, 0xdf9cb9);
   // Three separated tail feathers fan upward behind the folded wings.
@@ -939,69 +957,48 @@ export function createBibo() {
   tailFeather([-.49, 1.00], [-1.29, 1.91], .137, -.025);
   tailFeather([-.53, .89], [-1.61, 1.37], .150, .075);
 
-  const bib = new THREE.Shape();
-  bib.moveTo(.37, .50);
-  bib.bezierCurveTo(.73, .58, .83, .96, .80, 1.32);
-  bib.bezierCurveTo(.79, 1.63, .77, 1.93, .87, 2.10);
-  bib.bezierCurveTo(.98, 2.29, .87, 2.48, .69, 2.49);
-  bib.bezierCurveTo(.45, 2.50, .20, 2.37, .21, 2.18);
-  bib.bezierCurveTo(.24, 1.98, -.02, 1.83, .02, 1.63);
-  bib.bezierCurveTo(.04, 1.35, .38, 1.06, .29, .56); bib.closePath();
-  profile(body, bib, .32, white, 0, .10);
-
-  // A broad two-lobed crown flows into the back of the head, rather than
-  // sitting on top as a separate tuft.
-  const crest = new THREE.Shape();
-  crest.moveTo(.90, 2.12);
-  crest.bezierCurveTo(1.005, 2.24, .97, 2.42, .85, 2.54);
-  crest.bezierCurveTo(.83, 2.74, .89, 3.035, .74, 3.045);
-  crest.bezierCurveTo(.65, 3.068, .63, 3.008, .58, 3.015);
-  crest.bezierCurveTo(.35, 3.12, .105, 3.035, .061, 2.81);
-  crest.bezierCurveTo(.009, 2.52, .081, 2.14, -.06, 1.94);
-  crest.quadraticCurveTo(-.13, 1.85, -.23, 1.855);
-  crest.bezierCurveTo(.003, 1.755, .24, 1.96, .30, 2.28);
-  crest.bezierCurveTo(.34, 2.49, .53, 2.48, .58, 2.31);
-  crest.quadraticCurveTo(.72, 2.095, .90, 2.12); crest.closePath();
-  profile(body, crest, .36, pale, 0, .045);
-  const skinRadius = (shape, z, y, halfWidth) => {
-    const contour = shape.getPoints(20);
-    let distance = Infinity;
-    for (let i = 0; i < contour.length - 1; i++) {
-      const a = contour[i], b = contour[i + 1], dz = b.x - a.x, dy = b.y - a.y;
-      const t = Math.max(0, Math.min(1, ((z - a.x) * dz + (y - a.y) * dy) / (dz * dz + dy * dy)));
-      distance = Math.min(distance, Math.hypot(z - a.x - dz * t, y - a.y - dy * t));
+  // The neck is a smooth S-curve swept from the breast to the head, oval in
+  // section (wider than deep) so it reads as a rounded bird rather than a slab.
+  const neck = (points, radii) => {
+    const curve = new THREE.CatmullRomCurve3(points.map(p => new THREE.Vector3(...p)));
+    const rows = 40, sides = 32, frames = curve.computeFrenetFrames(rows, false);
+    const positions = [], colors = [], indices = [], a = new THREE.Color(pink), b = new THREE.Color(white);
+    for (let row = 0; row <= rows; row++) {
+      const t = row / rows, p = curve.getPointAt(t), at = t * (radii.length - 1), lower = Math.min(Math.floor(at), radii.length - 2);
+      const radius = THREE.MathUtils.lerp(radii[lower], radii[lower + 1], at - lower);
+      for (let col = 0; col <= sides; col++) {
+        const angle = col / sides * Math.PI * 2;
+        const offset = frames.normals[row].clone().multiplyScalar(Math.cos(angle) * radius * .86).addScaledVector(frames.binormals[row], Math.sin(angle) * radius);
+        const v = p.clone().add(offset);
+        positions.push(v.x, v.y, v.z);
+        const c = a.clone().lerp(b, THREE.MathUtils.smoothstep(offset.normalize().z, -.05, .6));
+        colors.push(c.r, c.g, c.b);
+        if (row && col < sides) { const i = row * (sides + 1) + col, j = i - sides - 1; indices.push(j, i, i + 1, j, i + 1, j + 1); }
+      }
     }
-    const t = Math.min(1, distance / .19);
-    return halfWidth + .025 * Math.sin(t * Math.PI / 2);
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+    geometry.setIndex(indices); geometry.computeVertexNormals();
+    const probe = new THREE.Vector3().fromBufferAttribute(geometry.attributes.normal, sides + 1);
+    const outward = new THREE.Vector3().fromBufferAttribute(geometry.attributes.position, sides + 1).sub(curve.getPointAt(1 / rows));
+    if (probe.dot(outward) < 0) { geometry.setIndex(indices.reverse()); geometry.computeVertexNormals(); }
+    return mesh(body, geometry, plumageMaterial);
   };
+  neck([[0, 1.02, .10], [0, 1.40, .45], [0, 1.80, .57], [0, 2.14, .57], [0, 2.30, .60]], [.40, .28, .235, .22, .21]);
+  const head = plumage(0, 2.30, .62, .335, .32, .36, pale, white, [0, -.25, 1], .15, .75);
+  head.rotation.x = .06;
+  // One tall rounded crest rises from the crown and leans back; a small lobe
+  // at the nape lets it flow into the back of the head.
+  const crest = plumage(0, 2.70, .50, .27, .40, .285, pale, pale, [0, 1, 0]);
+  crest.rotation.x = -.20;
+  plumage(0, 2.42, .38, .23, .21, .24, pale, pale, [0, 1, 0]);
   for (const side of [-1, 1]) {
-    const face = new THREE.Shape(); face.moveTo(.90, 2.12);
-    face.bezierCurveTo(1.005, 2.27, .89, 2.47, .69, 2.49);
-    face.bezierCurveTo(.63, 2.43, .60, 2.32, .58, 2.20);
-    face.bezierCurveTo(.60, 2.12, .79, 2.09, .90, 2.12); face.closePath();
-    const faceSurface = profile(body, face, .008, pale, 0, .004);
-    const facePositions = faceSurface.geometry.attributes.position;
-    for (let i = 0; i < facePositions.count; i++) facePositions.setX(i, side * (skinRadius(bib, facePositions.getZ(i), facePositions.getY(i), .26) + .009) + facePositions.getX(i) * .25);
-    faceSurface.geometry.computeVertexNormals();
-    const blaze = new THREE.Shape(); blaze.moveTo(.857, 2.455);
-    blaze.bezierCurveTo(.907, 2.56, .855, 2.65, .825, 2.62);
-    blaze.quadraticCurveTo(.825, 2.50, .857, 2.455); blaze.closePath();
-    const forehead = profile(body, blaze, .008, white, 0, .001);
-    const blazePositions = forehead.geometry.attributes.position;
-    for (let i = 0; i < blazePositions.count; i++) blazePositions.setX(i, side * (skinRadius(crest, blazePositions.getZ(i), blazePositions.getY(i), .225) + .004) + blazePositions.getX(i) * .25);
-    forehead.geometry.computeVertexNormals();
-    const cheek = new THREE.Shape();
-    cheek.moveTo(.76, 2.20); cheek.quadraticCurveTo(.67, 2.22, .55, 2.17);
-    cheek.bezierCurveTo(.57, 1.99, .61, 1.83, .71, 1.65);
-    cheek.bezierCurveTo(.75, 1.88, .82, 2.07, .76, 2.20); cheek.closePath();
-    const cheekSurface = profile(body, cheek, .013, 0xf376a3, 0, .012);
-    const cheekPositions = cheekSurface.geometry.attributes.position;
-    for (let i = 0; i < cheekPositions.count; i++) cheekPositions.setX(i, side * (skinRadius(bib, cheekPositions.getZ(i), cheekPositions.getY(i), .26) + .007) + cheekPositions.getX(i) * .30);
-    cheekSurface.geometry.computeVertexNormals();
-    const eyeX = skinRadius(bib, .734, 2.235, .26) + .018;
-    const eye = smoothBall(body, side * eyeX, 2.235, .734, .034, .100, .064, 0x27272b);
-    eye.rotation.x = -.24;
-    smoothBall(body, side * (eyeX + .031), 2.273, .752, .011, .028, .023, white);
+    const cheek = smoothBall(body, side * .28, 2.15, .72, .05, .17, .10, 0xf376a3);
+    cheek.rotation.set(.32, 0, side * .10);
+    const eye = smoothBall(body, side * .28, 2.31, .86, .038, .10, .064, 0x27272b);
+    eye.rotation.set(-.22, side * .28, 0);
+    smoothBall(body, side * .312, 2.35, .885, .012, .03, .024, white);
     const wing = group(pose, side * .448, 1.20, -.045);
     wing.scale.set(1, 1.08, 1.08);
     const outline = new THREE.Shape();
@@ -1013,7 +1010,7 @@ export function createBibo() {
     outline.quadraticCurveTo(-.61, -.63, -.46, -.61);
     outline.quadraticCurveTo(-.35, -.61, -.32, -.39);
     outline.bezierCurveTo(-.04, -.50, .39, -.13, .32, .21); outline.closePath();
-    profile(wing, outline, .025, plum, side * .030, .012);
+    profile(wing, outline, .04, plum, side * .030, .03);
     const cover = new THREE.Shape();
     cover.moveTo(.31, .21); cover.bezierCurveTo(.03, .34, -.44, .16, -.94, -.15);
     cover.quadraticCurveTo(-1.005, -.24, -.86, -.26);
@@ -1022,15 +1019,15 @@ export function createBibo() {
     cover.quadraticCurveTo(-.635, -.27, -.625, -.22);
     cover.quadraticCurveTo(-.56, -.40, -.44, -.31);
     cover.bezierCurveTo(-.17, -.47, .37, -.18, .31, .21); cover.closePath();
-    profile(wing, cover, .018, pale, side * .058, .013);
+    profile(wing, cover, .03, pale, side * .075, .03);
     batch(wing);
     root.userData[side < 0 ? 'leftWing' : 'rightWing'] = wing;
   }
-  // The slender blue bill drops from the face, with a darker lower edge.
-  const bill = new THREE.Shape(); bill.moveTo(.89, 2.14); bill.lineTo(1.10, 2.075);
-  bill.quadraticCurveTo(1.115, 1.875, 1.20, 1.66); bill.lineTo(.955, 1.95); bill.closePath();
-  profile(body, bill, .105, 0x379bcc, 0, .01);
-  for (const side of [-1, 1]) tube(body, [[side * .064, 2.105, .988], [side * .064, 1.985, 1.012], [side * .045, 1.748, 1.156]], .013, 0x7cd1e9, 12);
+  // The slender blue bill is a tapered cone hanging down and forward from the face.
+  const bill = cylinder(body, 0, 2.04, 1.02, .105, .02, .46, 0x379bcc, 20);
+  bill.rotation.x = -.52; bill.scale.x = .82;
+  const lip = cylinder(body, 0, 2.09, 1.03, .075, .025, .30, 0x2a83b3, 20);
+  lip.rotation.x = -.52; lip.scale.set(.86, 1, .7); lip.position.z += .05;
   batch(body);
   root.userData.body = body;
   root.rotation.y = -.55;
