@@ -12,7 +12,7 @@ page.on('pageerror', error => errors.push(error.message));
 page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
 const state = () => page.evaluate(() => window.__seer.getState());
 const closePanel = () => page.locator('#close-panel').click();
-let failure;
+let failure, activePage = page;
 try {
   await page.goto(base);
   await page.waitForFunction(() => window.__seer?.ready);
@@ -112,14 +112,17 @@ try {
   assert.equal((await state()).records.length, 2);
   assert.equal(await page.locator('.world-label.resource:visible').count(), 0);
   checks.push('Progress persists after reload');
+  await context.close();
 
   for (const viewport of [{ width: 390, height: 844 }, { width: 844, height: 390 }]) {
     const mobileContext = await browser.newContext({ viewport, isMobile: true, hasTouch: true });
     const mobile = await mobileContext.newPage();
+    activePage = mobile;
     mobile.on('pageerror', error => errors.push(error.message));
     await mobile.goto(base);
     await mobile.waitForFunction(() => window.__seer?.ready);
-    await mobile.waitForTimeout(350);
+    await mobile.bringToFront();
+    await mobile.waitForFunction(() => document.visibilityState === 'visible');
     const values = await mobile.evaluate(() => window.__seer.pixelSample());
     assert(new Set(values.map(p => p.slice(0, 3).join(','))).size > 7);
     assert(await mobile.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
@@ -130,18 +133,18 @@ try {
     assert(await mobile.locator('#panel').isVisible());
     await mobile.locator('#close-panel').tap();
     const t = (await mobile.evaluate(() => window.__seer.getState())).time;
-    await mobile.waitForTimeout(250);
-    assert((await mobile.evaluate(() => window.__seer.getState())).time > t);
+    await mobile.waitForFunction(previous => window.__seer.getState().time > previous + .05, t, { timeout: 10000 });
     checks.push(`Mobile ${viewport.width}x${viewport.height}: pixels, animation, layout and touch menu`);
     await mobileContext.close();
   }
   const quietContext = await browser.newContext({ viewport: { width: 1280, height: 800 }, reducedMotion: 'reduce' });
   const quiet = await quietContext.newPage();
+  activePage = quiet;
   quiet.on('pageerror', error => errors.push(error.message));
   await quiet.goto(base);
   await quiet.waitForFunction(() => window.__seer?.ready);
   const quietState = await quiet.evaluate(() => window.__seer.getState());
-  await quiet.waitForTimeout(300);
+  await quiet.waitForFunction(previous => window.__seer.getState().time > previous + .05, quietState.time, { timeout: 10000 });
   const quietAfter = await quiet.evaluate(() => window.__seer.getState());
   assert(quietAfter.time > quietState.time, 'Reduced motion must not pause the application');
   assert.equal(quietAfter.ambientPhase, 0, 'Reduced motion must freeze ambient effects');
@@ -155,7 +158,7 @@ try {
 } catch (error) {
   failure = String(error.stack || error);
   process.exitCode = 1;
-  await page.screenshot({ path: 'evidence/failure.png' }).catch(() => {});
+  await activePage.screenshot({ path: 'evidence/failure.png' }).catch(() => {});
 } finally {
   await writeFile('evidence/report.json', JSON.stringify({ passed: !failure, checks, errors, failure }, null, 2));
   console.log(JSON.stringify({ passed: !failure, checks, errors, failure }, null, 2));

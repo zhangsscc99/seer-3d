@@ -6,7 +6,7 @@ const base = process.env.SEER_URL || 'http://127.0.0.1:4175';
 await mkdir('evidence', { recursive: true });
 const browser = await chromium.launch({ channel: 'chrome', headless: true, timeout: 30000 });
 try {
-  const page = await browser.newPage({ viewport: { width: 1400, height: 1060 } });
+  const page = await browser.newPage({ viewport: { width: 1400, height: 1590 } });
   page.on('pageerror', error => { throw error; });
   await page.goto(`${base}/ScreenShot_2026-09-18_001547_516.png`);
   const stats = await page.evaluate(async () => {
@@ -19,16 +19,18 @@ try {
     document.body.replaceChildren();
     document.body.style.cssText = 'margin:0;background:#f2ede6';
     const board = document.createElement('canvas');
-    board.width = 1400; board.height = 1060;
+    board.width = 1400; board.height = 1590;
     document.body.append(board);
     const ctx = board.getContext('2d');
-    ctx.fillStyle = '#f2ede6'; ctx.fillRect(0, 0, 1400, 1060);
+    ctx.fillStyle = '#f2ede6'; ctx.fillRect(0, 0, 1400, 1590);
     ctx.fillStyle = '#294444'; ctx.font = 'bold 23px sans-serif';
     ctx.fillText('主角 · 原图', 70, 40); ctx.fillText('主角 · 当前三维模型', 745, 40);
     ctx.fillText('比波 · 原图', 70, 563); ctx.fillText('比波 · 当前三维模型', 745, 563);
+    ctx.fillText('皮皮 · 原图', 70, 1093); ctx.fillText('皮皮 · 当前三维模型', 745, 1093);
     ctx.imageSmoothingEnabled = false;
     ctx.drawImage(source, 1090, 731, 133, 163, 185, 58, 352, 432);
     ctx.drawImage(source, 916, 675, 164, 199, 178, 588, 353, 428);
+    ctx.drawImage(source, 580, 685, 115, 91, 90, 1118, 543, 430);
     const renderer = new T.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
     renderer.setSize(620, 445);
     renderer.shadowMap.enabled = true;
@@ -52,7 +54,7 @@ try {
     const painter = createPainter(renderer); painter.resize(620, 445);
     const camera = new T.OrthographicCamera(-1, 1, 1, -1, .1, 60);
     const results = [];
-    for (const [make, yaw, y] of [[W.createRobot, -.70, 57], [W.createBibo, -.55, 580]]) {
+    for (const [make, yaw, y] of [[W.createRobot, -.70, 57], [W.createBibo, -.55, 580], [W.createPipi, -.08, 1110]]) {
       const model = make(); model.rotation.y = yaw; scene.add(model);
       const bounds = new T.Box3().setFromObject(model);
       const center = bounds.getCenter(new T.Vector3());
@@ -93,8 +95,12 @@ try {
   await page.screenshot({ path: 'evidence/character-comparison.png' });
   await page.evaluate(() => {
     const { ctx } = window.reviewBoard;
-    ctx.fillStyle = '#f2ede6'; ctx.fillRect(720, 50, 670, 470); ctx.fillRect(720, 575, 670, 470);
-    window.reviewBacks.forEach((image, i) => ctx.drawImage(image, 720, i ? 580 : 57));
+    ctx.fillStyle = '#f2ede6';
+    window.reviewBacks.forEach((image, i) => {
+      const y = [57, 580, 1110][i];
+      ctx.fillRect(720, y - 7, 670, 470);
+      ctx.drawImage(image, 720, y);
+    });
   });
   await page.screenshot({ path: 'evidence/character-comparison-back.png' });
   console.log(JSON.stringify(stats));
