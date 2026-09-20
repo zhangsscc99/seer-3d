@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { createIcons, Orbit, VolumeX, Volume2, Maximize, Minimize, Radio, ScanLine, Gem, Focus, Plus, Minus, Bot, Navigation, BookOpen, Backpack, Image, X, Check, ArrowRight, MapPin } from 'lucide';
-import { createWorld, createRobot, createPet, createPipi, createBibo } from './world.js';
+import { createWorld, createRobot, createPet, createPipi, createBibo, bankEdge } from './world.js';
 import { createPainter } from './painter.js';
 import './style.css';
 
@@ -205,7 +205,7 @@ function init() {
 }
 
 function canWalk(x, z) {
-  return x >= -9.7 && x <= 10 && z >= -5.4 && z <= 10;
+  return x >= -9.7 && x <= Math.min(10, bankEdge(z) - .7) && z >= -5.4 && z <= 10;
 }
 
 function walkTo(x, z, callback = null) {

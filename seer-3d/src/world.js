@@ -524,46 +524,96 @@ function mushroom(parent, x, y, z, size = 1) {
   }
 }
 
-function fossil(parent) {
-  const g = group(parent, 12.8, 0, 1.7);
-  g.name = 'weathered-fossil-tree'; g.rotation.z = -.14;
-  const bark = surfaceMaterial(0xc49c70, 'bark');
-  const points = [[0, -.3, 0], [-.6, 2, -.4], [-.7, 4, -1], [.25, 6.3, -1.6], [1.2, 7.6, -2.3]];
-  branch(g, points, [1.75, 1.3, 1.14, .91, .64], bark, 56, 18);
-  branch(g, [[-.45, 2, -.3], [-2, 2.4, .4], [-2.8, 3.5, .6], [-2.7, 4.6, .5]], [.77, .58, .42, .16], bark);
-  branch(g, [[-.4, 4, -1], [1.2, 4.4, -.6], [2.3, 5.6, -.5], [2.55, 6.2, -.58]], [.69, .54, .35, .13], bark);
-  for (let i = 0; i < 12; i++) {
-    const a = i / 12 * Math.PI * 2;
-    const groove = points.map(([x, y, z], index) => {
-      const r = [1.67, 1.3, 1.13, .90, .63][index];
-      return [x + Math.sin(a + index * .10) * r, y + .1, z + Math.cos(a + index * .10) * r];
-    });
-    tube(g, groove, i % 3 ? .023 : .043, i % 3 ? 0xa47d5c : 0x866550, 36);
-    if (i % 2 === 0) tube(g, groove.map(([x, y, z]) => [x + .08, y, z + .018]), .018, 0xecd0a0, 36);
+// The right of the clearing is a broad sandstone bank pocked with oval pits;
+// a few pits cradle pink bulbs, as in the reference.
+export const bankEdge = z => 12.5 - (z + 4) * .36 + Math.sin(z * .7) * .6 + Math.sin(z * 1.9 + 1) * .3;
+const bankReach = z => 7 + Math.sin(z * .55) * 1.4;
+function bankHeight(x, z) {
+  const d = x - bankEdge(z);
+  if (d < 0) return -.3;
+  const t = Math.min(1, d / bankReach(z));
+  // The mound grows toward the viewer so its rounded face, not a flat top, fills the corner.
+  const rise = 3.0 + 3.2 * THREE.MathUtils.smoothstep(z, -4, 22);
+  const mound = rise * Math.pow(t, .5) * (1 - t * .12);
+  const lumps = (Math.sin(x * .9 + z * .4) * .35 + Math.sin(x * .35 - z * .8 + 1) * .5 + Math.sin((x + z) * 1.7) * .14) * THREE.MathUtils.smoothstep(d, .5, 4);
+  const lobes = Math.sin(z * 1.35 + x * .2) * .45 * THREE.MathUtils.smoothstep(d, 0, 1.5) * (1 - THREE.MathUtils.smoothstep(d, 2, 6));
+  const h = mound + lumps + lobes;
+  if (meadowContains(x, z)) return Math.min(h, meadowHeight(x, z) - .2);
+  return Math.min(h, meadowHeight(x, z) + 4.5 * THREE.MathUtils.smoothstep(meadowDistance(x, z), .4, 5));
+}
+function bankNormal(x, z) {
+  return new THREE.Vector3(bankHeight(x - .15, z) - bankHeight(x + .15, z), .3, bankHeight(x, z - .15) - bankHeight(x, z + .15)).normalize();
+}
+function pittedBank(parent) {
+  const g = group(parent);
+  g.name = 'pitted-sandstone-bank';
+  const cols = 56, rows = 70, x0 = 8, z0 = -8, step = .5;
+  const positions = [], colors = [], uv = [], indices = [];
+  const light = new THREE.Color(0xf1c893), mid = new THREE.Color(0xdc9c66), dark = new THREE.Color(0x9a5d3b), warm = new THREE.Color(0xe98a58);
+  for (let i = 0; i <= rows; i++) for (let j = 0; j <= cols; j++) {
+    const x = x0 + j * step, z = z0 + i * step, h = bankHeight(x, z);
+    positions.push(x, h, z); uv.push(x * .45, z * .45);
+    const slope = 1 - bankNormal(x, z).y;
+    const c = mid.clone().lerp(warm, THREE.MathUtils.smoothstep(z, 6, 24) * .55).lerp(light, THREE.MathUtils.clamp(h / 6.5, 0, 1) * .7).lerp(dark, THREE.MathUtils.clamp(slope * 1.7, 0, 1)).multiplyScalar(.95 + random() * .1);
+    colors.push(c.r, c.g, c.b);
+    if (i < rows && j < cols) { const a = i * (cols + 1) + j, b = a + cols + 1; indices.push(a, b, a + 1, a + 1, b, b + 1); }
   }
-  for (let i = 0; i < 7; i++) {
-    const yy = .5 + i * .95, xx = -.35 + Math.sin(i * 1.1) * .4;
-    const hole = group(g, xx, yy, 1.31 - i * .30);
-    hole.rotation.set(-.08, -.12, .35 + Math.sin(i) * .45);
-    const rim = ring(hole, 0, 0, 0, .46, .10, surfaceMaterial(0xe0b88a, 'stone'));
-    rim.scale.set(1, .70, 1);
-    ball(hole, 0, 0, -.045, .43, .30, .07, 0x634e47);
-    ball(hole, 0, -.04, .012, .33, .20, .035, i % 2 ? 0xda8791 : 0x9b695c);
-    if (i % 2) ball(hole, -.1, .035, .045, .14, .035, .013, 0xffc4b4);
-    for (let j = 0; j < 3; j++) {
-      const a = .5 + j * 2;
-      tube(hole, [[Math.sin(a) * .5, Math.cos(a) * .35, .015], [Math.sin(a) * .65, Math.cos(a) * .48, -.03], [Math.sin(a + .1) * .78, Math.cos(a + .1) * .6, -.08]], .017, 0x866650, 5);
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+  geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  geometry.setIndex(indices); geometry.computeVertexNormals();
+  mesh(g, geometry, strataMaterial);
+  const up = new THREE.Vector3(0, 1, 0);
+  const onSurface = (x, z, lift = 0) => [x, bankHeight(x, z) + lift, z];
+  const pits = [];
+  for (let row = 0; row < 11; row++) for (let col = 0; col < 6; col++) {
+    const z = -2 + row * 2.7 + (random() - .5) * 1.2;
+    const x = bankEdge(z) + 1.6 + col * 3.1 + (row % 2) * 1.5 + (random() - .5) * 1.2;
+    const d = x - bankEdge(z);
+    if (d < 1.3 || d > bankReach(z) + 6 || x > 32 || meadowDistance(x, z) < 1.8 || meadowContains(x, z)) continue;
+    const rx = .85 + random() * .7;
+    pits.push([x, z, rx, rx * (.55 + random() * .2), pits.length % 7 === 2]);
+  }
+  pits.forEach(([x, z, rx, rz, bulb], i) => {
+    const hole = group(g, ...onSurface(x, z, -.02));
+    hole.quaternion.setFromUnitVectors(up, bankNormal(x, z));
+    hole.rotateY(.6 + Math.sin(i * 2.3) * .5);
+    const rim = ring(hole, 0, .02, 0, 1, .09, surfaceMaterial(0xead0a4, 'stone'));
+    rim.rotation.x = Math.PI / 2; rim.scale.set(rx, rz, 1);
+    ball(hole, 0, .012, 0, rx * .96, .035, rz * .96, 0x5d3f31);
+    ball(hole, rx * .12, .03, rz * .18, rx * .62, .03, rz * .52, 0x8a5e46);
+    if (bulb) {
+      smoothBall(hole, 0, .10, 0, rx * .70, rx * .48, rz * .72, 0xf08b98);
+      smoothBall(hole, -rx * .22, .10 + rx * .36, -rz * .16, rx * .22, rx * .09, rz * .17, 0xffd3d8);
     }
+    for (let j = 0; j < 3; j++) {
+      const a = .4 + j * 2.1 + i * .3;
+      tube(hole, [[Math.sin(a) * rx * 1.05, .03, Math.cos(a) * rz * 1.05], [Math.sin(a + .1) * rx * 1.5, .03, Math.cos(a + .1) * rz * 1.55], [Math.sin(a + .25) * rx * 1.95, .03, Math.cos(a + .25) * rz * 2.0]], .022, 0x7e5540, 6);
+    }
+  });
+  const cracks = [
+    [[13.2, 6.2], [15.4, 7.6], [16.2, 9.8], [18.6, 10.6]],
+    [[17.6, 14.2], [19.4, 17.2], [21.8, 18.0], [22.6, 21.2]],
+    [[23.0, 6.6], [25.6, 9.4], [26.2, 12.2]],
+    [[14.0, 18.6], [16.2, 21.6], [16.8, 24.4]],
+    [[27.0, 15.6], [29.8, 17.6], [31.2, 20.8]],
+    [[20.8, 2.6], [22.8, 4.4], [24.4, 5.2]],
+  ];
+  cracks.forEach(points => {
+    const path = points.filter(([x, z]) => bankHeight(x, z) > .2).map(([x, z]) => onSurface(x, z, .035));
+    if (path.length > 1) tube(g, path, .032, 0x7a533e, path.length * 8);
+  });
+  // Strata seams follow the front of the mound: a pale weathered lip, then darker joints between boulders.
+  for (const [offset, radius, color] of [[.9, .07, 0xf3d3a8], [2.4, .045, 0x9a6a4c], [4.3, .04, 0x9a6a4c]]) {
+    const seam = [];
+    for (let z = -3; z <= 25; z += .8) {
+      const x = bankEdge(z) + offset + Math.sin(z * 1.1 + offset) * .35;
+      if (meadowDistance(x, z) > 1.2 && !meadowContains(x, z)) seam.push(onSurface(x, z, .045));
+    }
+    if (seam.length > 2) tube(g, seam, radius, color, seam.length * 2);
   }
-  for (let i = 0; i < 7; i++) {
-    const a = i / 7 * Math.PI * 2;
-    branch(g, [[Math.cos(a) * .5, .9, Math.sin(a) * .5], [Math.cos(a) * 1.55, .25, Math.sin(a) * 1.55], [Math.cos(a) * 2.8, .05, Math.sin(a) * 2.8]], [.65, .35, .035], bark, 20);
-  }
-  const crown = group(g, 1.25, 7.8, -2.23);
-  crown.rotation.x = -.35;
-  const end = cylinder(crown, 0, 0, 0, .56, .61, .07, 0x8c6751, 24);
-  for (const r of [.15, .29, .45, .59]) ring(crown, 0, .044, 0, r, .022, r === .59 ? 0xe4c092 : 0xc3956c).rotation.x = Math.PI / 2;
-  end.receiveShadow = true;
+  return g;
 }
 
 let grassGeometry;
@@ -1149,6 +1199,7 @@ export function createWorld() {
   mesh(scenery, ridge, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, side: THREE.DoubleSide }));
   for (let i = 0; i < wall.length - 1; i++) {
     const [x, z] = wall[i];
+    if (bankHeight(x, z) > 0) continue;
     for (let row = 0; row < 3; row++) {
       const width = 1.12 + random() * .52, depth = 1.15 + random() * .4;
       const height = .60 + random() * .19, rockX = x + (row % 2) * .9, rockY = .03 + row * .76;
@@ -1173,7 +1224,7 @@ export function createWorld() {
   coral(scenery, -11, -.8, 1.18, .2);
   coral(scenery, -17, -9, .85, -.35);
   coral(scenery, -20, 6, .68, 1);
-  fossil(scenery);
+  pittedBank(scenery);
   for (const [x, z, size] of [[8, -11, 1], [15, -6.2, 1.25], [16, -7.6, .85], [7, -7.2, .7]]) mushroom(scenery, x, meadowHeight(x, z), z, size);
   mushroom(scenery, -9, 0, 1, .72);
   for (const p of [[-21, 2.7, -32, 1.2], [-4, 2.7, -36, 1], [17, 3.4, -36, 1.3]]) fiddleFern(scenery, ...p);
@@ -1197,7 +1248,8 @@ export function createWorld() {
     const fold = bluePlant(scenery, x, 1.15, z, 1.25 + random() * .2, Math.PI + (random() - .5) * .5);
     fold.scale.y *= .42;
   }
-  for (const [x, z, s] of [[-13, 4, .45], [-10, 1.7, .36], [11.1, 3.5, .35], [14.4, 4.5, .48], [-17, -1, .7]]) mushroom(scenery, x, 0, z, s);
+  for (const [x, z, s] of [[-13, 4, .45], [-10, 1.7, .36], [11.1, 3.5, .35], [-17, -1, .7]]) mushroom(scenery, x, 0, z, s);
+  mushroom(scenery, 17.6, bankHeight(17.6, 4.0), 4.0, .48);
   for (let i = 0; i < 24; i++) {
     const x = -12 + random() * 24, z = 7 + random() * 4, length = .25 + random() * .65;
     tube(scenery, [[x, -.018, z], [x + length * .5, -.015, z + .05], [x + length, -.018, z]], .012, i % 2 ? 0xf0b88a : 0xbf7c5b, 6);
